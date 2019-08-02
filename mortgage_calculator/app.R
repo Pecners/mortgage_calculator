@@ -17,14 +17,15 @@ ui <- fluidPage(
     
     sidebarLayout(
         sidebarPanel(
-            numericInput("loan_tot", "Loan Total:", 0),
-            numericInput("rate", "Annual Rate:", 0)
-        )
-    ),
+            numericInput("loan_amount", "Loan Amount:", 0),
+            numericInput("annual_rate", "Annual Rate:", 0),
+            numericInput("term", "Term (in months):", 0)
+        ),
     
         # Show a plot of the generated distribution
         mainPanel(
-           textOutput("total_loan")
+           textOutput("loan_amount")
+        )
         
     )
 )
