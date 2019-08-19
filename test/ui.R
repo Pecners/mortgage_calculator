@@ -1,11 +1,3 @@
-#
-# This is the user-interface definition of a Shiny web application. You can
-# run the application by clicking 'Run App' above.
-#
-# Find out more about building applications with Shiny here:
-#
-#    http://shiny.rstudio.com/
-#
 
 library(shiny)
 
@@ -18,9 +10,11 @@ shinyUI(fluidPage(
     # Sidebar with a slider input for number of bins
     sidebarLayout(
         sidebarPanel(
-            numericInput("loan_amount", "Loan Amount:", 100000),
-            numericInput("annual_rate", "Annual Rate:", .04),
-            numericInput("term", "Term (in months):", 360)
+            numericInput("loan_amount", "Loan Amount:", 150000),
+            numericInput("annual_rate", "Annual Rate:", 0.04),
+            numericInput("term", "Term (months):", 360),
+            numericInput("xtr1", "Extra monthly payment:", 0, step = 50),
+            actionButton("calculate", "Calculate")
         ),
 
         # Show a plot of the generated distribution
