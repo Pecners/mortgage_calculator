@@ -62,7 +62,7 @@ shinyServer(function(input, output) {
            interest1[i] <- intr1
            principal1[i] <- prnp1
            balance1[i] <- loan_amount1
-           equity[i] <- eqt +ifelse(i == 1, 0, equity[i - 1])
+           equity[i] <- (eqt +ifelse(i == 1, 0, equity[i - 1]))/loan_amount1
        }
        
        updated_sched <- tibble(Payment = 1:term, 
@@ -71,7 +71,7 @@ shinyServer(function(input, output) {
                             Extra = paste("$", format(round(extra, 2), big.mark = ",")), 
                             Bonus = paste("$", format(round(bonus, 2), big.mark = ",")),
                             Balance = paste("$", format(round(balance1, 2), big.mark = ",")),
-                            Equity = paste("$", format(round(equity, 2), big.mark = ","))) %>%
+                            Equity = equity) %>%
            filter(!grepl("-", Interest))
        
        updated_sched
@@ -97,16 +97,31 @@ shinyServer(function(input, output) {
            (monthly_rate * (1 + monthly_rate) ^ term)/
            (((1 + monthly_rate) ^ term) - 1)
        
-       paste("By paying an extra", paste("$", format(input$xtr1, digits = 2, big.mark = ","), sep =""), "dollars a month, you will save",
-                                paste("$", format(savings(), nsmall = 2, big.mark = ","), sep =""),
-                                "in interest, and you will cut", floor(cut()/12), "years and", cut()%%12, "months off your loan.
-Your increased cashflow over that time from rent will be", paste("$", format(cut() * (total_PI), nsmall = 2, big.mark = ","), ",", sep =""),
-                                "which, added to the interest savings amounts to",
-                                paste("$", format((savings() + cut() * (total_PI)), nsmall = 2, big.mark = ","), ".", sep = ""), sep = " ")
+       paste("By paying an extra", 
+             paste("$", format(input$xtr1, digits = 2, big.mark = ","), sep =""), 
+             "dollars a month, you will save",
+             paste("$", format(savings(), nsmall = 2, big.mark = ","), sep =""),
+             "in interest, and you will cut", 
+             floor(cut()/12), "years and", cut()%%12, 
+             "months off your loan. Your increased cashflow over that time from rent will be", 
+             paste("$", format(cut() * (total_PI), nsmall = 2, big.mark = ","),
+                   ",", sep =""),
+             "which, added to the interest savings amounts to",
+             paste("$", format((savings() + cut() * (total_PI)), 
+                               nsmall = 2, big.mark = ","), 
+                   ".", sep = ""), sep = " ")
    })
    
+   output$report <- downloadHandler(
+      filename = "mortgage_report.pdf",
+      content = function(file) {
+         tempReport <- file.path(tempdir(), "report.Rmd")
+         file.copy("mortgage_report.Rmd", tempReport, overwrite = TRUE)
+         
+         params = list()
+      }
+   )
 
-    
    output$savings <- renderText({
        text()
    }) 
