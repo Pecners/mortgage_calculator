@@ -58,13 +58,11 @@ shinyServer(function(input, output) {
          prnp1 <- total_PI - intr1
          xtr1 <- input$xtr1
          loan_amount1 <- loan_amount1 - prnp1 - xtr1 - bonus[i]
-         eqt <- prnp1 + xtr1 + bonus[i]
-         
+
          extra[i] <- xtr1
          interest1[i] <- intr1
          principal1[i] <- prnp1
          balance1[i] <- loan_amount1
-         equity[i] <- (eqt +ifelse(i == 1, 0, equity[i - 1]))/loan_amount1
       }
       
       updated_sched <- tibble(Payment = 1:term, 
@@ -72,8 +70,7 @@ shinyServer(function(input, output) {
                               Principal = paste("$", format(round(principal1, 2), big.mark = ",")), 
                               Extra = paste("$", format(round(extra, 2), big.mark = ",")), 
                               Bonus = paste("$", format(round(bonus, 2), big.mark = ",")),
-                              Balance = paste("$", format(round(balance1, 2), big.mark = ",")),
-                              Equity = equity) %>%
+                              Balance = paste("$", format(round(balance1, 2), big.mark = ","))) %>%
          filter(!grepl("-", Interest))
       
       updated_sched
@@ -90,6 +87,11 @@ shinyServer(function(input, output) {
    })
    
    text <- eventReactive(input$calculate, {
+      
+      if(input$xtr1 == 0) {
+         paste("Add extra payments to see how much you'd save over the lifetime of your loan!")  
+      }
+      else{
       term <- input$term
       loan_amount <- input$loan_amount
       annual_rate <- input$annual_rate
@@ -112,6 +114,7 @@ shinyServer(function(input, output) {
             paste("$", format((savings() + cut() * (total_PI)), 
                               nsmall = 2, big.mark = ","), 
                   ".", sep = ""), sep = " ")
+      }
    })
    
    output$report <- downloadHandler(
@@ -127,7 +130,7 @@ shinyServer(function(input, output) {
       })
    
    output$savings <- renderText({
-      text()
+         text()
    }) 
    
    output$schedule <- renderTable({
