@@ -2,10 +2,10 @@
 title: "Amortization Report"
 output: pdf_document
 params:
-  loan_amount: 221000
+  loan_amount: 150000
   annual_rate: 0.04
   term: 360
-  xtr1: 0
+  xtr1: 100
   bonus: 0
 header-includes:
 - \usepackage{booktabs}
@@ -20,7 +20,9 @@ header-includes:
 - \usepackage{threeparttable}
 - \usepackage{xcolor}
 ---
-
+This report reflects the following parameters:  
+  
+**Loan Amount**: `r paste("$", format(round(params$loan_amount, 2), big.mark = ","))`
 ```{r echo=FALSE, message=FALSE, warning=FALSE}
 
 library(tidyverse)
@@ -69,28 +71,50 @@ for (i in 1:term) {
    balance1[i] <- loan_amount1
 }
 
-updated_sched_for <- tibble(Payment = 1:term, 
-                        Interest = round(interest1, 2), 
+updated_sched_for <- tibble("Payment #" = 1:term, 
+                        Interest = paste("$", format(round(interest1, 2), big.mark = ",")), 
                         Principal = paste("$", format(round(principal1, 2), big.mark = ",")), 
                         Extra = paste("$", format(round(extra, 2), big.mark = ",")), 
                         Bonus = paste("$", format(round(bonus, 2), big.mark = ",")),
                         Balance = paste("$", format(round(balance1, 2), big.mark = ","))) %>%
-   filter(!grepl("-", Interest))
+   filter(!grepl("-", Balance)) 
+
+if(params$xtr1 == 0) {
+   updated_sched_for <- updated_sched_for %>%
+      select(-Extra)
+}
+
+if(params$bonus ==0) {
+   updated_sched_for <- updated_sched_for %>%
+      select(-Bonus)
+}
 
 updated_sched <- tibble(Payment_no = 1:term,
                         Interest = interest1,
                         Principal = principal1,
                         Extra = extra,
                         Bonus = bonus,
-                        Balance = balance1)
+                        Balance = balance1,
+                        Diff = Interest-Principal) %>%
+   filter(Balance > 0)
+
+flip <- updated_sched %>%
+   filter(Diff > 0) %>%
+   with(., Payment_no[Diff == min(Diff)])
+flip
+
 
 updated_sched %>%
   gather(2:3, key = "payment", value = "amount") %>%
   ggplot(aes(Payment_no, amount, color = payment, fill = payment)) +
-  geom_line(alpha = 0.5) +
-   geom_area(position = "identity", alpha = 0.25, border.alpha = 0, color = NA) +
-   scale_color_manual(values = c("darkgreen", "red")) +
-   scale_fill_manual(values = c("darkgreen", "red")) +
-   geom_vline(xintercept = 152, linetype = "dotted", alpha = 0.5) +
-  theme_minimal()
+   geom_area(alpha = 0.25) +
+   scale_color_manual(values = c("red", "darkgreen")) +
+   scale_fill_manual(values = c("red", "darkgreen")) +
+   geom_vline(xintercept = flip, linetype = "dotted", alpha = 0.5) +
+  theme_minimal() +
+   labs(title = "Breakdown of Principal/Interest Payments", 
+        subtitle = paste("*Total Monthly Amount:", paste("$", format(round(total_PI, 2), big.mark = ",")), sep = " "),
+        caption = "*Total Monthly Amount listed above does not account for PMI, homeowner's insurance, taxes, etc.",
+        x = "",
+        y = "")
 ```
