@@ -2,7 +2,7 @@
 title: "Amortization Report"
 output: pdf_document
 params:
-  loan_amount: 150000
+  loan_amount: 221000
   annual_rate: 0.04
   term: 360
   xtr1: 0
@@ -52,8 +52,6 @@ std_sched <- tibble(Payment = 1:term,
                     Interest = round(interest, 2), 
                     Principal = round(principal, 2), 
                     Balance = paste("$", format(round(balance, 2), big.mark = ",")))
-std_sched %>%
-  kable()
 
 loan_amount1 <- params$loan_amount
 
@@ -88,7 +86,11 @@ updated_sched <- tibble(Payment_no = 1:term,
 
 updated_sched %>%
   gather(2:3, key = "payment", value = "amount") %>%
-  ggplot(aes(Payment_no, amount, color = payment)) +
-  geom_line() +
+  ggplot(aes(Payment_no, amount, color = payment, fill = payment)) +
+  geom_line(alpha = 0.5) +
+   geom_area(position = "identity", alpha = 0.25, border.alpha = 0, color = NA) +
+   scale_color_manual(values = c("darkgreen", "red")) +
+   scale_fill_manual(values = c("darkgreen", "red")) +
+   geom_vline(xintercept = 152, linetype = "dotted", alpha = 0.5) +
   theme_minimal()
 ```
