@@ -2,7 +2,7 @@
 title: "Amortization Report"
 output: pdf_document
 params:
-  loan_amount: 150000
+  loan_amount: 200000
   annual_rate: 0.04
   term: 360
   xtr1: 100
@@ -22,11 +22,18 @@ header-includes:
 ---
 This report reflects the following parameters:  
   
-**Loan Amount**: `r paste("$", format(round(params$loan_amount, 2), big.mark = ","))`
+**Loan Amount**: `r paste("$", format(params$loan_amount, big.mark = ","))`  
+**Annual Rate**: `r paste(params$annual_rate*100, "%", sep = "")`  
+**Term**: `r paste(params$term, "months", sep = " ")`
+```{r message=FALSE, warning=FALSE, include=FALSE}
+xtr1 <- paste("**Extra Monthly Payment**: ", paste("$", params$xtr1, sep = ""))
+```
+`r if(params$xtr1 > 0) {xtr1}`
 ```{r echo=FALSE, message=FALSE, warning=FALSE}
 
 library(tidyverse)
 library(knitr)
+library(scales)
 
 # Calculate standard amortization schedule
 term <- params$term
@@ -50,7 +57,17 @@ for (i in 1:term) {
    balance[i] <- loan_amount
 }
 
-std_sched <- tibble(Payment = 1:term, 
+std_sched <- tibble(payment_no = 1:term, 
+                    interest, 
+                    principal, 
+                    balance)
+
+std_cum <- std_sched %>%
+   mutate(cum_prin = cumsum(principal),
+          cum_int = cumsum(interest)) %>%
+   gather(c(cum_prin, cum_int), key = "payment", value = "amount")
+
+std_sched_for <- tibble(Payment = 1:term, 
                     Interest = round(interest, 2), 
                     Principal = round(principal, 2), 
                     Balance = paste("$", format(round(balance, 2), big.mark = ",")))
@@ -89,7 +106,7 @@ if(params$bonus ==0) {
       select(-Bonus)
 }
 
-updated_sched <- tibble(Payment_no = 1:term,
+updated_sched <- tibble(payment_no = 1:term,
                         Interest = interest1,
                         Principal = principal1,
                         Extra = extra,
@@ -98,23 +115,43 @@ updated_sched <- tibble(Payment_no = 1:term,
                         Diff = Interest-Principal) %>%
    filter(Balance > 0)
 
+updated_cum <- updated_sched %>%
+   mutate(cum_prin = cumsum(Principal+Extra),
+          cum_int = cumsum(Interest)) %>%
+   gather(c(cum_prin, cum_int), key = "payment", value = "amount")
+
 flip <- updated_sched %>%
    filter(Diff > 0) %>%
-   with(., Payment_no[Diff == min(Diff)])
+   with(., payment_no[Diff == min(Diff)])
 flip
 
 
 updated_sched %>%
   gather(2:3, key = "payment", value = "amount") %>%
-  ggplot(aes(Payment_no, amount, color = payment, fill = payment)) +
+  ggplot(aes(payment_no, amount, color = payment, fill = payment)) +
    geom_area(alpha = 0.25) +
    scale_color_manual(values = c("red", "darkgreen")) +
    scale_fill_manual(values = c("red", "darkgreen")) +
    geom_vline(xintercept = flip, linetype = "dotted", alpha = 0.5) +
+   scale_y_continuous(labels = dollar_format(prefix = "$")) +
   theme_minimal() +
    labs(title = "Breakdown of Principal/Interest Payments", 
         subtitle = paste("*Total Monthly Amount:", paste("$", format(round(total_PI, 2), big.mark = ",")), sep = " "),
         caption = "*Total Monthly Amount listed above does not account for PMI, homeowner's insurance, taxes, etc.",
         x = "",
         y = "")
+
+std_cum %>%
+   ggplot(aes(payment_no, amount, color = payment)) +
+   geom_line() +
+   geom_line(inherit.aes = FALSE, data = updated_cum,
+             aes(payment_no, amount, color = payment), linetype = 2) +
+   scale_color_manual(values = c("red", "darkgreen"),
+                      labels = c("Interest", "Principal")) +
+   scale_y_continuous(labels = dollar_format(prefix = "$")) +
+   theme_minimal() +
+   labs(x = "", y = "", title = "Total Payment Allocations over Lifetime of Loan",
+        color = "") +
+   theme(legend.position = "bottom") +
+   scale_fill_discrete(name = "", labels = c("Interest", "Principal"))
 ```
