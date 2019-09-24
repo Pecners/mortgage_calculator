@@ -14,6 +14,7 @@ shinyServer(function(input, output) {
       term <- input$term
       loan_amount <- input$loan_amount
       annual_rate <- input$annual_rate
+      start_date <- input$start_date
       
       monthly_rate <- annual_rate/12
       total_PI <- loan_amount * 
@@ -31,12 +32,20 @@ shinyServer(function(input, output) {
          principal[i] <- prnp
          balance[i] <- loan_amount
       }
+      std_sched <- tibble(date = seq.Date(from = as_date(start_date), by = "month",
+                                     length.out = term),
+                          payment_no = 1:term,
+                          interest, 
+                          principal, 
+                          balance)
       
-      std_sched <- tibble(Payment = 1:term, 
-                          Interest = round(interest, 2), 
-                          Principal = round(principal, 2), 
+      std_sched1 <- tibble(Payment = 1:term, 
+                           Date = seq.Date(from = as_date(start_date), by = "month",
+                                      length.out = term),
+                          Interest = paste("$", format(round(interest, 2), big.mark = ",")), 
+                          Principal = paste("$", format(round(principal, 2), big.mark = ",")),
                           Balance = paste("$", format(round(balance, 2), big.mark = ",")))
-      std_sched
+      std_sched1
    })
    
    # Calculate updated schedule
@@ -45,6 +54,7 @@ shinyServer(function(input, output) {
       term <- input$term
       loan_amount1 <- input$loan_amount
       annual_rate <- input$annual_rate
+      start_date <- input$start_date
       
       monthly_rate <- annual_rate/12
       total_PI <- loan_amount1 * 
@@ -65,13 +75,14 @@ shinyServer(function(input, output) {
          balance1[i] <- loan_amount1
       }
       
-      updated_sched <- tibble(Payment = 1:term, 
-                              Interest = round(interest1, 2), 
+      updated_sched <- tibble(Date = seq.Date(from = as_date(start_date), by = "month",
+                                         length.out = term),
+                              Interest = paste("$", format(round(interest1, 2), big.mark = ",")),
                               Principal = paste("$", format(round(principal1, 2), big.mark = ",")), 
                               Extra = paste("$", format(round(extra, 2), big.mark = ",")), 
                               Bonus = paste("$", format(round(bonus, 2), big.mark = ",")),
                               Balance = paste("$", format(round(balance1, 2), big.mark = ","))) %>%
-         filter(!grepl("-", Interest))
+         filter(!grepl("-", Interest)) 
       
       updated_sched
    })
@@ -133,7 +144,7 @@ shinyServer(function(input, output) {
          text()
    }) 
    
-   output$schedule <- renderTable({
+   output$schedule <- renderDataTable({
       updated_sched()
    })
    

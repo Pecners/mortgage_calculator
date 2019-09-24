@@ -2,11 +2,12 @@
 title: "Amortization Report"
 output: pdf_document
 params:
-  loan_amount: 200000
+  loan_amount: 150000
   annual_rate: 0.04
   term: 360
-  xtr1: 100
+  xtr1: 0
   bonus: 0
+  start_date: "2018-01-01"
 header-includes:
 - \usepackage{booktabs}
 - \usepackage{longtable}
@@ -21,19 +22,20 @@ header-includes:
 - \usepackage{xcolor}
 ---
 This report reflects the following parameters:  
-  
-**Loan Amount**: `r paste("$", format(params$loan_amount, big.mark = ","))`  
-**Annual Rate**: `r paste(params$annual_rate*100, "%", sep = "")`  
-**Term**: `r paste(params$term, "months", sep = " ")`
 ```{r message=FALSE, warning=FALSE, include=FALSE}
 xtr1 <- paste("**Extra Monthly Payment**: ", paste("$", params$xtr1, sep = ""))
 ```
+**Loan Amount**: `r paste("$", format(params$loan_amount, big.mark = ","))`  
+**Annual Rate**: `r paste(params$annual_rate*100, "%", sep = "")`  
+**Term**: `r paste(params$term, "months", sep = " ")`  
 `r if(params$xtr1 > 0) {xtr1}`
+
 ```{r echo=FALSE, message=FALSE, warning=FALSE}
 
 library(tidyverse)
 library(knitr)
 library(scales)
+library(lubridate)
 
 # Calculate standard amortization schedule
 term <- params$term
@@ -45,7 +47,7 @@ total_PI <- loan_amount *
    (monthly_rate * (1 + monthly_rate) ^ term)/
    (((1 + monthly_rate) ^ term) - 1)
 
-interest <- principal <- balance <- vector("numeric", term)
+interest <- principal <- balance <- date <- vector("numeric", term)
 
 for (i in 1:term) {
    intr <- loan_amount * monthly_rate
@@ -57,7 +59,9 @@ for (i in 1:term) {
    balance[i] <- loan_amount
 }
 
-std_sched <- tibble(payment_no = 1:term, 
+std_sched <- tibble(date = seq(from = as_date(params$start_date), by = "month",
+                               length.out = params$term),
+                    payment_no = 1:term,
                     interest, 
                     principal, 
                     balance)
@@ -106,7 +110,9 @@ if(params$bonus ==0) {
       select(-Bonus)
 }
 
-updated_sched <- tibble(payment_no = 1:term,
+updated_sched <- tibble(date = seq(from = as_date(params$start_date), by = "month",
+                                       length.out = params$term),
+                        payment_no = 1:term,
                         Interest = interest1,
                         Principal = principal1,
                         Extra = extra,
@@ -127,25 +133,27 @@ flip
 
 
 updated_sched %>%
-  gather(2:3, key = "payment", value = "amount") %>%
-  ggplot(aes(payment_no, amount, color = payment, fill = payment)) +
+  gather(3:4, key = "payment", value = "amount") %>%
+  ggplot(aes(date, amount, color = payment, fill = payment)) +
    geom_area(alpha = 0.25) +
    scale_color_manual(values = c("red", "darkgreen")) +
    scale_fill_manual(values = c("red", "darkgreen")) +
-   geom_vline(xintercept = flip, linetype = "dotted", alpha = 0.5) +
+   geom_vline(xintercept = updated_sched$date[99], linetype = "dotted", alpha = 0.5) +
    scale_y_continuous(labels = dollar_format(prefix = "$")) +
   theme_minimal() +
-   labs(title = "Breakdown of Principal/Interest Payments", 
+   theme(legend.position = "bottom") +
+   labs(title = "Breakdown of Principal/Interest Payment", 
         subtitle = paste("*Total Monthly Amount:", paste("$", format(round(total_PI, 2), big.mark = ",")), sep = " "),
         caption = "*Total Monthly Amount listed above does not account for PMI, homeowner's insurance, taxes, etc.",
         x = "",
-        y = "")
+        y = "",
+        fill = "")
 
 std_cum %>%
-   ggplot(aes(payment_no, amount, color = payment)) +
+   ggplot(aes(date, amount, color = payment)) +
    geom_line() +
    geom_line(inherit.aes = FALSE, data = updated_cum,
-             aes(payment_no, amount, color = payment), linetype = 2) +
+             aes(date, amount, color = payment), linetype = 2) +
    scale_color_manual(values = c("red", "darkgreen"),
                       labels = c("Interest", "Principal")) +
    scale_y_continuous(labels = dollar_format(prefix = "$")) +
